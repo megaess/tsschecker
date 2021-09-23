@@ -180,6 +180,10 @@ static struct bbdevice bbdevices[] = {
     {"iPhone13,2", 3095201109, 4},  // iPhone 12
     {"iPhone13,3", 3095201109, 4},  // iPhone 12 Pro
     {"iPhone13,4", 3095201109, 4},  // iPhone 12 Pro Max
+    {"iPhone14,2", 0, 0},  // iPhone 13 Pro Max
+    {"iPhone14,3", 0, 0},  // iPhone 13 Pro
+    {"iPhone14,4", 0, 0},  // iPhone 13 mini
+    {"iPhone14,5", 0, 0},  // iPhone 13
     
     // iPads
     {"iPad1,1",  0, 0},          // iPad (1st gen)
@@ -201,6 +205,8 @@ static struct bbdevice bbdevices[] = {
     {"iPad7,12", 165673526, 12}, // iPad (7th gen, 2019, Cellular)
     {"iPad11,6", 0, 0},          // iPad (8th gen, 2020, Wi-Fi)
     {"iPad11,7", 165673526, 12}, // iPad (8th gen, 2020, Cellular)
+    {"iPad12,1", 0, 0},          // iPad (9th gen, 2021, Wi-Fi)
+    {"iPad12,2", 165673526, 12}, // iPad (9th gen, 2021, Cellular)
     
     // iPad minis
     {"iPad2,5",  0, 0},          // iPad mini (1st gen, Wi-Fi)
@@ -216,6 +222,8 @@ static struct bbdevice bbdevices[] = {
     {"iPad5,2",  3840149528, 4}, // iPad mini 4 (Cellular)
     {"iPad11,1", 0, 0},          // iPad mini (5th gen, Wi-Fi)
     {"iPad11,2", 165673526, 12}, // iPad mini (5th gen, Cellular)
+    {"iPad14,1", 0, 0},          // iPad mini (6th gen, Wi-Fi)
+    {"iPad14,2", 0, 0}, // iPad mini (6th gen, Cellular)
     
     // iPad Airs
     {"iPad4,1",  0, 0},          // iPad Air (Wi-Fi)
@@ -285,6 +293,10 @@ static struct bbdevice bbdevices[] = {
     {"Watch6,2",  0, 0},          // Apple Watch Series 6 (44mm GPS)
     {"Watch6,3",  744114402, 12}, // Apple Watch Series 6 (40mm GPS + Cellular)
     {"Watch6,4",  744114402, 12}, // Apple Watch Series 6 (44mm GPS + Cellular)
+    {"Watch6,6",  0, 0},          // Apple Watch Series 7 (41mm GPS)
+    {"Watch6,7",  0, 0},          // Apple Watch Series 7 (45mm GPS)
+    {"Watch6,8",  744114402, 12}, // Apple Watch Series 7 (41mm GPS + Cellular)
+    {"Watch6,9",  744114402, 12}, // Apple Watch Series 7 (45mm GPS + Cellular)
     
     // HomePods
     {"AudioAccessory1,1", 0, 0}, // HomePod 1st gen
@@ -531,7 +543,20 @@ malloc_rets:
     return (t_versionURL*)rets_base;
 }
 
+#ifdef WIN32
 static void fragmentzip_callback(){}
+#else
+static void printline(int percent){
+    info("%03d [",percent);for (int i=0; i<100; i++) putchar((percent >0) ? ((--percent > 0) ? '=' : '>') : ' ');
+    info("]");
+}
+
+static void fragmentzip_callback(unsigned int progress){
+    info("\x1b[A\033[J"); //clear 2 lines
+    printline((int)progress);
+    info("\n");
+}
+#endif
 
 int downloadPartialzip(const char *url, const char *file, const char *dst){
     log("[LFZP] downloading %s from %s\n",file,url);
@@ -586,10 +611,34 @@ char *getBuildManifest(char *url, const char *device, const char *version, const
     
     if (!f || nocache){
         //download if it isn't there
-        if (downloadPartialzip(url, (isOta) ? "AssetData/boot/BuildManifest.plist" : "BuildManifest.plist", fileDir)){
-            free(fileDir);
-            return NULL;
+        int got_buildmanifest = 0;
+
+        if (!isOta) {
+            int index = 0;
+            for (int i = 0; i < strlen(url); i++) {
+                if (url[i] == '/') {
+                    index = i;
+                }
+            }
+
+            char *buildmanifest_url = malloc(strlen(url));
+            buildmanifest_url = strncpy(buildmanifest_url, url, index);
+            buildmanifest_url[index] = '\0';
+            buildmanifest_url = strcat(buildmanifest_url, "/BuildManifest.plist");
+
+            if (downloadFile(buildmanifest_url, fileDir) == 0) {
+                free(buildmanifest_url);
+                got_buildmanifest = 1;
+            }
         }
+
+        if (!got_buildmanifest) {
+            if (downloadPartialzip(url, (isOta) ? "AssetData/boot/BuildManifest.plist" : "BuildManifest.plist", fileDir)){
+                free(fileDir);
+                return NULL;
+            }
+        }
+
         f = fopen(fileDir, "rb");
     }
     fseek(f, 0, SEEK_END);
@@ -875,6 +924,14 @@ getID0:
             reterror("[TSSR] ERROR: Unable to add img3 tags to TSS request\n");
         }
     }
+    if (plist_dict_get_item(tssreq, "Savage,BE-Dev-Patch"))
+        plist_dict_remove_item(tssreq, "Savage,BE-Dev-Patch");
+    if(plist_dict_get_item(tssreq, "Savage,BE-Prod-Patch"))
+        plist_dict_remove_item(tssreq, "Savage,BE-Prod-Patch");
+    if(plist_dict_get_item(tssreq, "Savage,BF-Dev-Patch"))
+        plist_dict_remove_item(tssreq, "Savage,BF-Dev-Patch");
+    if(plist_dict_get_item(tssreq, "Savage,BF-Prod-Patch"))
+        plist_dict_remove_item(tssreq, "Savage,BF-Prod-Patch");
     if (basebandMode == kBasebandModeOnlyBaseband) {
         if (plist_dict_get_item(tssreq, "@ApImg4Ticket"))
             plist_dict_set_item(tssreq, "@ApImg4Ticket", plist_new_bool(0));
@@ -1176,7 +1233,11 @@ int printListOfDevices(jssytok_t *tokens){
     size_t currLen = 0;
     int rspn = 0;
     putchar('\n');
-    jssytok_t *ctok = jssy_dictGetValueForKey(tokens, "devices");
+    jssytok_t *ctok = NULL;
+    if (!(ctok = jssy_dictGetValueForKey(tokens, "devices"))){
+        warning("Failed to get value for key 'devices', trying with tokens instead!\n\n");
+        ctok = tokens;
+    }
     
     jssytok_t *tmp = ctok->subval;
     for (size_t i=0; i<ctok->size; tmp = tmp->next,i++) {

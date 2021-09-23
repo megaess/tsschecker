@@ -38,7 +38,7 @@
 #else
 #include <sys/stat.h>
 #define __mkdir(path, mode) mkdir(path, mode)
-#define FMT_qu "%qu"
+#define FMT_qu "%llu"
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -48,7 +48,11 @@
 #include "tss.h"
 #include "endianness.h"
 
-#define TSS_CLIENT_VERSION_STRING "libauthinstall-776.40.16"
+#ifdef WIN32
+#define TSS_CLIENT_VERSION_STRING "libauthinstall_Win-850.0.2" 
+#else
+#define TSS_CLIENT_VERSION_STRING "libauthinstall-850.0.2"
+#endif
 #define ECID_STRSIZE 0x20
 #define GET_RAND(min, max) ((rand() % (max - min)) + min)
 
@@ -766,8 +770,8 @@ int tss_request_add_ap_tags(plist_t request, plist_t parameters, plist_t overrid
 				debug("DEBUG: %s: Skipping '%s' as it is not trusted", __func__, key);
 				continue;
 			}
-			if (!_plist_dict_get_bool(info_dict, "IsFirmwarePayload") && !_plist_dict_get_bool(info_dict, "IsSecondaryFirmwarePayload") && !_plist_dict_get_bool(info_dict, "IsFUDFirmware")) {
-				debug("DEBUG: %s: Skipping '%s' as it is neither firmware nor secondary nor FUD firmware payload\n", __func__, key);
+			if (!_plist_dict_get_bool(manifest_entry, "Trusted") && !_plist_dict_get_bool(info_dict, "IsFirmwarePayload") && !_plist_dict_get_bool(info_dict, "IsSecondaryFirmwarePayload") && !_plist_dict_get_bool(info_dict, "IsFUDFirmware")) {
+				debug("DEBUG: %s: Skipping '%s' as it is neither firmware nor secondary firmware payload\n", __func__, key);
 				continue;
 			}
 		}
