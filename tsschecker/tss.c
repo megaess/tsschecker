@@ -48,11 +48,14 @@
 #include "tss.h"
 #include "endianness.h"
 
+#define AUTH_VERSION "850.0.2"
+
 #ifdef WIN32
-#define TSS_CLIENT_VERSION_STRING "libauthinstall_Win-850.0.2" 
+#define TSS_CLIENT_VERSION_STRING "libauthinstall_Win-"AUTH_VERSION"" 
 #else
-#define TSS_CLIENT_VERSION_STRING "libauthinstall-850.0.2"
+#define TSS_CLIENT_VERSION_STRING "libauthinstall-"AUTH_VERSION""
 #endif
+
 #define ECID_STRSIZE 0x20
 #define GET_RAND(min, max) ((rand() % (max - min)) + min)
 
@@ -460,6 +463,34 @@ int tss_parameters_add_from_manifest(plist_t parameters, plist_t build_identity)
 	}
 	node = NULL;
 
+	/* add Baobab,BoardID */
+	node = plist_dict_get_item(build_identity, "Baobab,BoardID");
+	if (node) {
+		plist_dict_set_item(parameters, "Baobab,BoardID", plist_copy(node));
+	}
+	node = NULL;
+
+	/* add Baobab,ChipID */
+	node = plist_dict_get_item(build_identity, "Baobab,ChipID");
+	if (node) {
+		plist_dict_set_item(parameters, "Baobab,ChipID", plist_copy(node));
+	}
+	node = NULL;
+
+	/* add Baobab,ManifestEpoch */
+	node = plist_dict_get_item(build_identity, "Baobab,ManifestEpoch");
+	if (node) {
+		plist_dict_set_item(parameters, "Baobab,ManifestEpoch", plist_copy(node));
+	}
+	node = NULL;
+
+	/* add Baobab,SecurityDomain */
+	node = plist_dict_get_item(build_identity, "Baobab,SecurityDomain");
+	if (node) {
+		plist_dict_set_item(parameters, "Baobab,SecurityDomain", plist_copy(node));
+	}
+	node = NULL;
+
 	/* add eUICC,ChipID */
 	node = plist_dict_get_item(build_identity, "eUICC,ChipID");
 	if (node) {
@@ -752,12 +783,19 @@ int tss_request_add_ap_tags(plist_t request, plist_t parameters, plist_t overrid
 			return -1;
 		}
 
-		/* do not populate BasebandFirmware, only in baseband request */
-		if ((strcmp(key, "BasebandFirmware") == 0)) {
-			free(key);
-			continue;
-		}
+        /* do not populate BasebandFirmware, only in baseband request */
+        if ((strcmp(key, "BasebandFirmware") == 0)) {
+            free(key);
+            continue;
+        }
 
+        /* do not populate Savage, only in Savage request */
+        if ((strncmp(key, "Savage",sizeof("Savage")-1) == 0)) {
+            free(key);
+            continue;
+        }
+
+        
 		/* only used with diagnostics firmware */
 		if ((strcmp(key, "Diags") == 0)) {
 			free(key);
@@ -1188,7 +1226,7 @@ int tss_request_add_yonkers_tags(plist_t request, plist_t parameters, plist_t ov
     
     plist_t manifest_node = plist_dict_get_item(parameters, "Manifest");
     if (!manifest_node || plist_get_node_type(manifest_node) != PLIST_DICT) {
-        error("ERROR: %s: Unable to get restore manifest from parameters\n", __func__);
+        tsserror("ERROR: %s: Unable to get restore manifest from parameters\n", __func__);
         return -1;
     }
     
@@ -1199,7 +1237,7 @@ int tss_request_add_yonkers_tags(plist_t request, plist_t parameters, plist_t ov
     /* add SEP */
     node = plist_access_path(manifest_node, 2, "SEP", "Digest");
     if (!node) {
-        error("ERROR: Unable to get SEP digest from manifest\n");
+        tsserror("ERROR: Unable to get SEP digest from manifest\n");
         return -1;
     }
     plist_t dict = plist_new_dict();
@@ -1212,7 +1250,7 @@ int tss_request_add_yonkers_tags(plist_t request, plist_t parameters, plist_t ov
         for (i = 0; i < (int)(sizeof(keys) / sizeof(keys[0])); ++i) {
             node = plist_dict_get_item(parameters, keys[i]);
             if (!node) {
-                error("ERROR: %s: Unable to find required %sin parameters\n", __func__, keys[i]);
+                tsserror("ERROR: %s: Unable to find required %sin parameters\n", __func__, keys[i]);
             }
             plist_dict_set_item(request, keys[i], plist_copy(node));
             node = NULL;
@@ -1267,7 +1305,7 @@ int tss_request_add_yonkers_tags(plist_t request, plist_t parameters, plist_t ov
     free(iter);
     
     if (comp_name == NULL) {
-        error("ERROR: No Yonkers node for %s/%lu\n", (isprod) ? "Production" : "Development", (unsigned long)fabrevision);
+        tsserror("ERROR: No Yonkers node for %s/%lu\n", (isprod) ? "Production" : "Development", (unsigned long)fabrevision);
         return -1;
     }
     
@@ -1298,7 +1336,7 @@ int tss_request_add_vinyl_tags(plist_t request, plist_t parameters, plist_t over
 
 	plist_t manifest_node = plist_dict_get_item(parameters, "Manifest");
 	if (!manifest_node || plist_get_node_type(manifest_node) != PLIST_DICT) {
-		error("ERROR: %s: Unable to get restore manifest from parameters\n", __func__);
+		tsserror("ERROR: %s: Unable to get restore manifest from parameters\n", __func__);
 		return -1;
 	}
 
@@ -1351,7 +1389,7 @@ int tss_request_add_rose_tags(plist_t request, plist_t parameters, plist_t overr
 
 	plist_t manifest_node = plist_dict_get_item(parameters, "Manifest");
 	if (!manifest_node || plist_get_node_type(manifest_node) != PLIST_DICT) {
-		error("ERROR: %s: Unable to get restore manifest from parameters\n", __func__);
+		tsserror("ERROR: %s: Unable to get restore manifest from parameters\n", __func__);
 		return -1;
 	}
 
@@ -1440,11 +1478,11 @@ int tss_request_add_veridian_tags(plist_t request, plist_t parameters, plist_t o
 
 	plist_t manifest_node = plist_dict_get_item(parameters, "Manifest");
 	if (!manifest_node || plist_get_node_type(manifest_node) != PLIST_DICT) {
-		error("ERROR: %s: Unable to get restore manifest from parameters\n", __func__);
+		tsserror("ERROR: %s: Unable to get restore manifest from parameters\n", __func__);
 		return -1;
 	}
 
-	/* add tags indicating we want to get the Rap,Ticket */
+	/* add tags indicating we want to get the BMU,Ticket */
 	plist_dict_set_item(request, "@BBTicket", plist_new_bool(1));
 	plist_dict_set_item(request, "@BMU,Ticket", plist_new_bool(1));
 
@@ -1514,6 +1552,83 @@ int tss_request_add_veridian_tags(plist_t request, plist_t parameters, plist_t o
 		plist_dict_merge(&request, overrides);
 	}
 
+	return 0;
+}
+
+int tss_request_add_tcon_tags(plist_t request, plist_t parameters, plist_t overrides)
+{
+	plist_t node = NULL;
+
+	plist_t manifest_node = plist_dict_get_item(parameters, "Manifest");
+	if (!manifest_node || plist_get_node_type(manifest_node) != PLIST_DICT) {
+		tsserror("ERROR: %s: Unable to get restore manifest from parameters\n", __func__);
+		return -1;
+	}
+
+	/* add tags indicating we want to get the Baobab,Ticket */
+	plist_dict_set_item(request, "@BBTicket", plist_new_bool(1));
+	plist_dict_set_item(request, "@Baobab,Ticket", plist_new_bool(1));
+
+	uint64_t u64val = 0;
+	uint8_t bval = 0;
+	uint8_t isprod = 0;
+
+	u64val = _plist_dict_get_uint(parameters, "Baobab,BoardID");
+	plist_dict_set_item(request, "Baobab,BoardID", plist_new_uint(u64val));
+
+	u64val = _plist_dict_get_uint(parameters, "Baobab,ChipID");
+	plist_dict_set_item(request, "Baobab,ChipID", plist_new_uint(u64val));
+
+	node = plist_dict_get_item(parameters, "Baobab,ECID");
+	if (node) {
+		plist_dict_set_item(request, "Baobab,ECID", plist_copy(node));
+	}
+
+	u64val = _plist_dict_get_uint(parameters, "Baobab,Life");
+	plist_dict_set_item(request, "Baobab,Life", plist_new_uint(u64val));
+
+	u64val = _plist_dict_get_uint(parameters, "Baobab,ManifestEpoch");
+	plist_dict_set_item(request, "Baobab,ManifestEpoch", plist_new_uint(u64val));
+
+	isprod = _plist_dict_get_bool(parameters, "Baobab,ProductionMode");
+	plist_dict_set_item(request, "Baobab,ProductionMode", plist_new_bool(isprod));
+
+	u64val = _plist_dict_get_uint(parameters, "Baobab,SecurityDomain");
+	plist_dict_set_item(request, "Baobab,SecurityDomain", plist_new_uint(u64val));
+
+	node = plist_dict_get_item(parameters, "Baobab,UpdateNonce");
+	if (node) {
+		plist_dict_set_item(request, "Baobab,UpdateNonce", plist_copy(node));
+	}
+
+	char *comp_name = NULL;
+	plist_dict_iter iter = NULL;
+	plist_dict_new_iter(manifest_node, &iter);
+	while (iter) {
+		node = NULL;
+		comp_name = NULL;
+		plist_dict_next_item(manifest_node, iter, &comp_name, &node);
+		if (comp_name == NULL) {
+			node = NULL;
+			break;
+		}
+		if (strncmp(comp_name, "Baobab,", 7) == 0) {
+			plist_t manifest_entry = plist_copy(node);
+
+			plist_dict_remove_item(manifest_entry, "Info");
+			plist_dict_set_item(manifest_entry, "EPRO", plist_new_bool(isprod));
+
+			/* finally add entry to request */
+			plist_dict_set_item(request, comp_name, manifest_entry);
+		}
+		free(comp_name);
+	}
+	free(iter);
+
+	/* apply overrides */
+	if (overrides) {
+		plist_dict_merge(&request, overrides);
+	}
 	return 0;
 }
 
@@ -1637,16 +1752,16 @@ char* tss_request_send_raw(char* request, const char* server_url_string, int* re
             // ignoring error that occurs when saving blobs on certain A8(X) devices and earlier
             break;
         } else {
-            error("ERROR: tss_send_request: Unhandled status code %d\n", status_code);
+            tsserror("ERROR: tss_send_request: Unhandled status code %d\n", status_code);
         }
     }
     
     if (status_code != 0) {
         if (response && strstr(response->content, "MESSAGE=") != NULL) {
             char* message = strstr(response->content, "MESSAGE=") + strlen("MESSAGE=");
-            error("ERROR: TSS request failed (status=%d, message=%s)\n", status_code, message);
+            tsserror("ERROR: TSS request failed (status=%d, message=%s)\n", status_code, message);
         } else {
-            error("ERROR: TSS request failed: %s (status=%d)\n", curl_error_message, status_code);
+            tsserror("ERROR: TSS request failed: %s (status=%d)\n", curl_error_message, status_code);
         }
         free(request);
         if (response)
@@ -1679,7 +1794,7 @@ plist_t tss_request_send(plist_t tss_request, const char* server_url_string) {
     if (rsp){
         char* tss_data = strstr(rsp, "<?xml");
         if (tss_data == NULL) {
-            error("ERROR: Incorrectly formatted TSS response\n");
+            tsserror("ERROR: Incorrectly formatted TSS response\n");
             free(request);
             free(rsp);
             return NULL;
