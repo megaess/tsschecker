@@ -87,7 +87,7 @@ void cmd_help(){
     printf("      --bbsnum SNUM\t\tmanually specify BbSNUM in HEX to save valid BBTickets (not required for saving blobs)\n\n");
     printf("      --save-path PATH\t\tspecify output path for saving shsh blobs\n");
     printf("      --server-url URL\t\tmanually specify TSS server URL\n");
-    printf("      --bplist\t\t\tsave the fetched shsh blobs as a binary plist (use with -s)\n");
+    printf("      --bplist\t\t\tsave the fetched blobs in a binary plist (as a .bshsh2 file)\n");
     printf("      --beta\t\t\trequest tickets for a beta instead of normal release (use with -o)\n");
     printf("      --list-devices\t\tlist all known devices\n");
     printf("      --list-ios\t\tlist all known firmware versions\n");
