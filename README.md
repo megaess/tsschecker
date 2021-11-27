@@ -66,7 +66,7 @@ To compile, run:
 ```bash
 ./autogen.sh
 make
-sudo make install
+make install
 ```
 
 # Help  
@@ -90,8 +90,7 @@ Example: `tsschecker -d iPhone10,3 -B D22AP -e 5482657301265 -i 14.7.1 --generat
 |  `-e`          | `--ecid ECID`	            | manually specify ECID to be used for fetching blobs, instead of using random ones<br/>ECID must be either DEC or HEX eg. 5482657301265 or 0xab46efcbf71                                                                                               |
 |  `-g`          | `--generator GEN`         | manually specify generator in HEX format 16 in length (eg. 0x1111111111111111)    |
 |      			       | `--apnonce NONCE`   		    | manually specify ApNonce instead of using random ones<br/>(required for saving blobs for A12/S4 and newer devices with generator)                                                                                                                       |
-|      			       | `--sepnonce NONCE`        | manually specify SEP Nonce instead of using random ones (not required for saving blobs) 		                   
-                                                                                                                                 |
+|      			       | `--sepnonce NONCE`        | manually specify SEP Nonce instead of using random ones (not required for saving blobs) 		                                                                                                                                                    |
 |                | `--bbsnum SNUM`           | manually specify BbSNUM in HEX to save valid BBTickets (not required for saving blobs)                                                                                                                                                                  |
 |      			       | `--save-path PATH`        | specify output path for saving shsh blobs 		 											                          |
 |                | `--server-url URL`        | manually specify TSS server URL                                                   |
