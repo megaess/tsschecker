@@ -1,5 +1,5 @@
 # tsschecker  
-tsschecker is a powerful tool to check TSS signing status on combinations of various apple devices and firmware versions.
+A Powerful tool to check TSS signing status on combinations of various apple devices and firmware versions.
 
 ## Features  
 * Supports: Apple TV, Apple Watch, HomePod, iPad, iPhone, iPod touch, M1 Macs and the T2 Coprocessor.
