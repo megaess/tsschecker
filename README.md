@@ -25,7 +25,7 @@ arm64e devices such as the iPhone XR, Apple Watch Series 4 and all newer devices
 Nonce Entangling works by further randomizing the boot nonce by encrypting it with the device's [unique ID key](https://www.theiphonewiki.com/wiki/UID_key),<br/>
 making the nonce created from the generator specific to that device only.
 
-To save reusable tickets for an arm64e device, you must get the boot nonce that the device creates from your generator,<br/>
+To save tickets for an arm64e device, you must get the boot nonce that the device creates from your generator,<br/>
 the simpliest way to get a nonce/generator pair is to use airsquared's [blobsaver](https://github.com/airsquared/blobsaver) tool and read them from the device.
 
 if you need more information, [see this post on r/jailbreak](https://www.reddit.com/r/jailbreak/comments/cssh8f/tutorial_easiest_way_to_save_blobs_on_a12/).
